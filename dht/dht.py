@@ -99,13 +99,14 @@ class Stabalizer(Thread):
             r = requests.get(url)
             if r.status_code == 200 or r.status_code == 307:
                 x = r.text
-                x_id = self.node.get_hash(x)
-                if x_id > self.node.id and x_id < self.node.get_hash(self.node.successor):
-                    self.node.successor = x
-                url = 'http://{0}/dht/notify?addr={1}'.format(self.node.successor, self.node.host)
-                r = requests.post(url)
-                if r.status_code != 200:
-                    print('Error notifying successor: {0}'.format(url), file=sys.stderr)
+                if x:
+                    x_id = self.node.get_hash(x)
+                    if x_id > self.node.id and x_id < self.node.get_hash(self.node.successor):
+                        self.node.successor = x
+                    url = 'http://{0}/dht/notify?addr={1}'.format(self.node.successor, self.node.host)
+                    r = requests.post(url)
+                    if r.status_code != 200:
+                        print('Error notifying successor: {0}'.format(url), file=sys.stderr)
             else:
                 print('Error getting predecessor for successor: {0}'.format(url), file=sys.stderr)
         self.stabilize_timer = Timer(interval, self.stabilize, [interval])

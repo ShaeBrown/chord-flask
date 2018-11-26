@@ -1,11 +1,11 @@
-from flask import Flask, redirect, url_for, request, logging, abort
+from flask import Flask, redirect, url_for, request, logging, abort, render_template
 import os
 import requests
 from dht.dht import DHTNode
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder="../visualize/dist", static_url_path="")
 app.secret_key = os.environ["secret_key"]
-m = 120
+m = 5
 node = None
 
 @app.before_first_request
@@ -20,6 +20,12 @@ def ping():
   Returns when the server is ready.
   """
   return ''
+
+@app.route('/dht/peers/view', methods=['GET'])
+def view_peers():
+  p = peers_id().split('\n')
+  p = list(map(int, p))
+  return render_template('visualize.html', m=m, peers=p)
 
 @app.route('/dht', methods=['GET'])
 def keys():
@@ -64,7 +70,7 @@ def put(key):
     return redirect(url, code=302)
   return abort(404)
 
-@app.route('/dht/<key>', methods=['DELETE'])
+@app.route('/db/<key>', methods=['DELETE'])
 def delete(key):
   """
   Deletes the key from the DHT if it exists, noop otherwise.
@@ -91,7 +97,7 @@ def peers():
   peers = []
   peers.append(node.host)
   succ = node.successor
-  while succ != None and succ not in peers: # TODO will there be a circle?
+  while succ and succ not in peers: # TODO will there be a circle?
     peers.append(succ)
     url = "http://{0}/dht/get_successor".format(succ)
     r = requests.get(url)
@@ -109,15 +115,18 @@ def peers_id():
   """
   peers = []
   peers.append(str(node.id))
+  curr = node.host
   succ = node.successor
-  while succ != None and succ != node.host:
+  while succ and succ != curr:
     peers.append(str(node.get_hash(succ)))
     url = "http://{0}/dht/get_successor".format(succ)
     r = requests.get(url)
     if r.status_code == 200:
+      curr = succ
       succ = r.text
     else:
       abort(404)
+      return
   return "\n".join(peers)
 
 @app.route('/dht/join', methods=['POST', 'PUT'])
