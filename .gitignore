@@ -4,4 +4,3 @@ build
 .venv
 .vscode/*
 *.pyc
-.env

@@ -1,12 +1,9 @@
 from flask import Flask, redirect, url_for, request, logging, abort, render_template
 import os
 import requests
-from dotenv import load_dotenv
 from dht.dht import DHTNode
 
-load_dotenv()
 app = Flask(__name__, static_folder="../visualize/dist", static_url_path="")
-app.secret_key = os.environ["secret_key"]
 m = 10
 node = None
 
@@ -175,6 +172,7 @@ def join():
     <name1>:<host1>:<port1>\n<name2>:<host2>:<port2>...
   """
   addrs = request.data.decode().split("\n")
+  print(addrs)
   try:
     for addr in addrs:
       node.join(addr)
