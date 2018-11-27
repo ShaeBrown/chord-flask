@@ -7,7 +7,7 @@ from dht.dht import DHTNode
 load_dotenv()
 app = Flask(__name__, static_folder="../visualize/dist", static_url_path="")
 app.secret_key = os.environ["secret_key"]
-m = 120
+m = 10
 node = None
 
 @app.before_first_request
@@ -15,6 +15,7 @@ def startup():
   global node
   addr = app.config['SERVER_NAME']
   node = DHTNode(addr, m)
+  print("This server's id is {0}".format(node.id))
 
 @app.route('/', methods=['GET'])
 def ping():
@@ -42,12 +43,13 @@ def view_key_path(key):
 @app.route('/db/path/<key>', methods=['GET'])
 def get_key_path(key):
   val = node.get_key(key)
-  if val:
+  if val or node.successor == node.host:
     return node.id
   path = [str(node.id)]
   h = node.get_hash(key)
-  if node.is_successor(h):
-    path.append(str(node.get_hash(node.successor)))
+  succ_id = node.get_hash(node.successor)
+  if DHTNode.between(h, node.id, succ_id, inclusive=True):
+    path.append(str(succ_id))
     return "\n".join(path)
   addr = node.closest_preceding_node(id)
   if addr == node.host:
@@ -78,7 +80,7 @@ def get(key):
   if val:
     return val
   h = node.get_hash(key)
-  succ = __find_successor(node, h)
+  succ = _find_successor(node, h)
   if succ == node.host:
     return ""
   if succ:
@@ -93,14 +95,16 @@ def put(key):
   request.
   """
   h = node.get_hash(key)
-  succ = __find_successor(node, h)
+  succ = _find_successor(node, h)
   if succ == node.host:
     node.set_key(key, request.data.decode())
     return "ok", 200
   if succ:
-    url = "http://" + succ + url_for('put', key=key, data=request.data)
-    print(url)
-    return redirect(url, code=302)
+    url = "http://" + succ + url_for('put', key=key)
+    res = requests.post(url, data=request.data)
+    if res.status_code != 200:
+      return abort(404)
+    return "ok", 200
   return abort(404)
 
 @app.route('/db/<key>', methods=['DELETE'])
@@ -113,7 +117,7 @@ def delete(key):
     node.delete_key(key)
     return "deleted", 200
   h = node.get_hash(key)
-  succ = __find_successor(node, h)
+  succ = _find_successor(node, h)
   if succ == node.host:
     return "non existent", 200
   if succ:
@@ -196,13 +200,13 @@ def get_successor():
 @app.route('/dht/find_successor', methods=['GET'])
 def find_successor():
   id = int(request.args.get('id'))
-  return __find_successor(node, id)
+  return _find_successor(node, id)
 
 @app.route('/dht/get_predecessor', methods=['GET'])
 def get_predecessor():
   if node.predecessor:
     return node.predecessor
-  return ""
+  return node.host
 
 @app.route('/dht/notify', methods=['POST', 'PUT'])
 def notify():
@@ -212,11 +216,20 @@ def notify():
     return "predecessor updated", 200
   return "predecessor not updated", 200
 
-def __find_successor(node, id):
-  if node.is_successor(id):
-    return node.successor
-  addr = node.closest_preceding_node(id)
-  url =  "http://" + addr + url_for('find_successor', id=id)
-  return redirect(url, code=307)
+@app.route('/dht/closest_preceding_node', methods=["GET"])
+def closest_preceding_node():
+  id = int(request.args.get('id'))
+  return node.closest_preceding_node(id)
 
+def _find_successor(node, id):
+  if node.host == node.successor:
+    return node.host
+  if DHTNode.between(id, node.id, node.get_hash(node.successor), inclusive=True):
+    return node.successor
+  url = "http://{0}/dht/closest_preceding_node?id={1}".format(node.successor, id)
+  r = requests.get(url)
+  n0 = r.text
+  url =  "http://{0}/dht/find_successor?id={1}".format(n0, id)
+  res = requests.get(url)
+  return res.text
     

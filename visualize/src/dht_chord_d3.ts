@@ -63,7 +63,7 @@ export class DHTChord {
         var coords: [number, number][] = []
         coords[0] = [this.get_x(path[0]), this.get_y(path[0])];
         coords[3] = coords[0]
-        var mid = [this.get_x(path[0], -20), this.get_y(path[0], -20)];
+        var mid = [this.get_x(path[0], -25), this.get_y(path[0], -25)];
         coords[1] = [mid[0] + 10, mid[1] - 10]
         coords[2] = [mid[0] + 10, mid[1] + 10]
 
