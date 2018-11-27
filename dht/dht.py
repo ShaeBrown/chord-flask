@@ -50,13 +50,6 @@ class DHTNode(object):
             return True
         return False
 
-    def __call_successor(self, addr, id):
-        url = "http://{0}/dht/find_successor?id={1}".format(addr, id)
-        r = requests.get(url)
-        if r.status_code == 200:
-            return r.text
-        raise ConnectionError
-
     def closest_preceding_node(self, id):
         for i in range(self.m - 1, -1, -1):
             if self.id < self.finger_table[i] and self.finger_table[i] < id:
@@ -66,11 +59,21 @@ class DHTNode(object):
     def get_hash(self, key):
         return int.from_bytes(sha1(key.encode()).digest(), byteorder='big') % 2**self.m
 
+    def get_finger_id(self, i):
+        return (self.id + 2**(i-1)) % 2**self.m
+
     def __contruct_fingertable(self):
         finger_table = []
         for i in range(self.m):
-            finger_table[i] = dht_server.__find_successor(self, (self.id + 2**(i-1)) % 2**self.m)
+            finger_table[i] = dht_server.__find_successor(self, self.get_finger_id(i))
         return finger_table
+
+    def __call_successor(self, addr, id):
+        url = "http://{0}/dht/find_successor?id={1}".format(addr, id)
+        r = requests.get(url)
+        if r.status_code == 200:
+            return r.text
+        raise ConnectionError
 
 class Stabalizer(Thread):
     def __init__(self, node):
@@ -102,6 +105,7 @@ class Stabalizer(Thread):
                 if x:
                     x_id = self.node.get_hash(x)
                     if x_id > self.node.id and x_id < self.node.get_hash(self.node.successor):
+                        print("Successor updated to %s", x)
                         self.node.successor = x
                     url = 'http://{0}/dht/notify?addr={1}'.format(self.node.successor, self.node.host)
                     r = requests.post(url)
@@ -113,16 +117,15 @@ class Stabalizer(Thread):
         self.stabilize_timer.run()
 
     def fix_fingers(self, interval):
-        self.next += 1
-        if self.next > self.node.m:
-            self.next = 0
-        id = (self.node.id + 2**(self.next-1)) % 2**self.node.m
+        id = self.node.get_finger_id(self.next)
         next_entry = dht_server.__find_successor(self.node, id)
         if next_entry.status_code != 200 and next_entry.status_code != 307:
             print('Error fixing finger table', file=sys.stderr)
             return
         else:
+            print("Updating entry %d to %s\n", self.next, next_entry)
             self.node.finger_table[self.next] = next_entry
+        self.next = (self.next + 1) % self.node.m
         self.fix_fingers_timer = Timer(interval, self.fix_fingers, [interval])
         self.fix_fingers_timer.run()
 
@@ -131,6 +134,7 @@ class Stabalizer(Thread):
             url = "http://{0}/".format(self.node.predecessor)
             r = requests.get(url)
             if r.status_code != 200:
+                print("Set predecessor to nil")
                 self.node.predecessor = None
         self.check_predecessor_timer = Timer(interval, self.check_predecessor, [interval])
         self.check_predecessor_timer.run()

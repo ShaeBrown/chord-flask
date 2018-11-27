@@ -1,15 +1,10 @@
-import * as ReactDOM from 'react-dom'
-import * as React from 'react'
-import {DHTRenderer, Props} from './dht_chord_renderer'
+import {DHTChord} from './dht_chord_d3'
 
-export function render(m: number, peers: number[], key?: number, path?: number[]) {
-    var props: Props = {width: 400, height: 400, m: m, peers: peers}
+export function render(root: string, width: number, height: number, 
+        m: number, peers: number[], key?: number, path?: number[]) {
+    var chord = new DHTChord(root, width, height, m, peers)
+    chord.build_chord()
     if (key && path) {
-        props.key_id = key
-        props.path = path
+       chord.draw_key_path(key, path)
     }
-    ReactDOM.render(
-        React.createElement(DHTRenderer, props),
-        document.getElementById("body")
-    );
 }

@@ -1,7 +1,11 @@
-<div id="body"></div>
+<div class="body"></div>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
 <script>var exports = {}</script>
 <script src="{{url_for('static', filename='bundle.js')}}"></script>
 <script type="text/javascript">
-    DHTRenderer.render({{ m }}, {{ peers }})
+    {% if key is defined and path is defined %}
+        DHTRenderer.render(".body", 400, 400, {{ m }}, {{ peers }}, {{ key }}, {{ path }})
+    {% else %}
+        DHTRenderer.render(".body", 400, 400, {{ m }}, {{ peers }})
+    {% endif %}
 </script>

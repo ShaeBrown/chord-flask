@@ -1,11 +1,13 @@
 from flask import Flask, redirect, url_for, request, logging, abort, render_template
 import os
 import requests
+from dotenv import load_dotenv
 from dht.dht import DHTNode
 
+load_dotenv()
 app = Flask(__name__, static_folder="../visualize/dist", static_url_path="")
 app.secret_key = os.environ["secret_key"]
-m = 5
+m = 120
 node = None
 
 @app.before_first_request
@@ -26,6 +28,36 @@ def view_peers():
   p = peers_id().split('\n')
   p = list(map(int, p))
   return render_template('visualize.html', m=m, peers=p)
+
+@app.route('/db/view/<key>', methods=['GET'])
+def view_key_path(key):
+  p = peers_id().split('\n')
+  p = list(map(int, p))
+  path = get_key_path(key).split("\n")
+  path = list(map(int, p))
+  key = node.get_hash(key)
+  return render_template('visualize.html', m=m, peers=p, key=key, path=path)
+
+
+@app.route('/db/path/<key>', methods=['GET'])
+def get_key_path(key):
+  val = node.get_key(key)
+  if val:
+    return node.id
+  path = [str(node.id)]
+  h = node.get_hash(key)
+  if node.is_successor(h):
+    path.append(str(node.get_hash(node.successor)))
+    return "\n".join(path)
+  addr = node.closest_preceding_node(id)
+  if addr == node.host:
+    return "\n".join(path)
+  url =  "http://" + addr + url_for('get_key_path', key=key)
+  r = request.get(url)
+  if r.status_code != 200:
+    return abort(404)
+  path += r.text.split("\n")
+  return "\n".join(path)
 
 @app.route('/dht', methods=['GET'])
 def keys():
@@ -67,6 +99,7 @@ def put(key):
     return "ok", 200
   if succ:
     url = "http://" + succ + url_for('put', key=key, data=request.data)
+    print(url)
     return redirect(url, code=302)
   return abort(404)
 
