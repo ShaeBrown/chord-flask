@@ -10,7 +10,7 @@ npm install
 webpack
 ```
 If you have [yarn](https://yarnpkg.com/en/docs/install), you can use the `yarn` command instead.
-You can edit the parameters in [visualize.html](./visualize/dist/visualize.html) to preview how the front end works.
+You can edit the parameters in [visualize.html](./visualize/visualize.html) to preview how the front end works.
 ## Build back end
 ### Install requirements
 Ensure you have [python](https://www.python.org/downloads/) installed.  
