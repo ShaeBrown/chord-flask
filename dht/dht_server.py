@@ -32,27 +32,26 @@ def view_key_path(key):
   p = peers_id().split('\n')
   p = list(map(int, p))
   path = get_key_path(key).split("\n")
-  path = list(map(int, p))
+  path = list(map(int, path))
   key = node.get_hash(key)
   return render_template('visualize.html', m=m, peers=p, key=key, path=path)
-
 
 @app.route('/db/path/<key>', methods=['GET'])
 def get_key_path(key):
   val = node.get_key(key)
   if val or node.successor == node.host:
-    return node.id
+    return str(node.id)
   path = [str(node.id)]
   h = node.get_hash(key)
   succ_id = node.get_hash(node.successor)
   if DHTNode.between_right_inclusive(h, node.id, succ_id):
     path.append(str(succ_id))
     return "\n".join(path)
-  addr = node.closest_preceding_node(id)
+  addr = node.closest_preceding_node(h)
   if addr == node.host:
     return "\n".join(path)
   url =  "http://" + addr + url_for('get_key_path', key=key)
-  r = request.get(url)
+  r = requests.get(url)
   if r.status_code != 200:
     return abort(404)
   path += r.text.split("\n")
@@ -72,17 +71,21 @@ def get(key):
   Returns the value for the key stored in this DHT or an empty response
   if it doesn't exist.
   """
-  
   val = node.get_key(key)
   if val:
     return val
   h = node.get_hash(key)
+  if DHTNode.between_right_inclusive(h, node.get_hash(node.predecessor), node.id):
+    return ""
   succ = _find_successor(node, h)
   if succ == node.host:
     return ""
   if succ:
     url = "http://" + succ + url_for('get', key=key)
-    return redirect(url, code=302)
+    res = requests.get(url)
+    if res.status_code != 200:
+      return abort(404)
+    return res.text, 200
   return abort(404)
 
 @app.route('/db/<key>', methods=['POST', 'PUT'])
@@ -114,12 +117,17 @@ def delete(key):
     node.delete_key(key)
     return "deleted", 200
   h = node.get_hash(key)
+  if DHTNode.between_right_inclusive(h, node.get_hash(node.predecessor), node.id):
+    return "non existent", 200
   succ = _find_successor(node, h)
   if succ == node.host:
     return "non existent", 200
   if succ:
-    url = "http://" + succ + url_for('get', key=key)
-    return redirect(url, code=307)
+    url = "http://" + succ + url_for('delete', key=key)
+    res = requests.delete(url)
+    if res.status_code != 200:
+      return abort(404)
+    return res.text, 200
   return abort(404)
 
 @app.route('/dht/peers', methods=['GET'])
@@ -170,7 +178,6 @@ def join():
     <name1>:<host1>:<port1>\n<name2>:<host2>:<port2>...
   """
   addrs = request.data.decode().split("\n")
-  print(addrs)
   try:
     for addr in addrs:
       node.join(addr)

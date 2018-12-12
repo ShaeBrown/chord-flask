@@ -20,7 +20,7 @@
 									"pm.test(\"join succeeds\", function () {",
 									"    pm.response.to.have.status(200);",
 									"    pm.response.to.be.ok;",
-									"    setTimeout(() => {}, 5000);",
+									"    setTimeout(() => {}, 10000);",
 									"});"
 								],
 								"type": "text/javascript"
@@ -45,7 +45,8 @@
 								"dht",
 								"join"
 							]
-						}
+						},
+						"description": "Assumes four servers are running on ports 5000,5001,5002 and 5003. Joins the servers together, and expects on ok response.\nWaits some time for the system to stabalize."
 					},
 					"response": []
 				},
@@ -86,7 +87,8 @@
 								"dht",
 								"peers"
 							]
-						}
+						},
+						"description": "Ensure node running on port 5000 is aware of all its peers"
 					},
 					"response": []
 				},
@@ -127,7 +129,8 @@
 								"dht",
 								"peers"
 							]
-						}
+						},
+						"description": "Ensure node running on port 5001 is aware of all its peers"
 					},
 					"response": []
 				},
@@ -168,7 +171,8 @@
 								"dht",
 								"peers"
 							]
-						}
+						},
+						"description": "Ensure node running on port 5002 is aware of all its peers"
 					},
 					"response": []
 				},
@@ -209,12 +213,468 @@
 								"dht",
 								"peers"
 							]
-						}
+						},
+						"description": "Ensure node running on port 5003 is aware of all its peers"
 					},
 					"response": []
 				}
 			],
 			"description": "Ensure all nodes are aware of each other after a 4-way join"
+		},
+		{
+			"name": "get_key",
+			"item": [
+				{
+					"name": "get_0",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "6bf68982-ca8f-432a-97a6-6099fa41a2c3",
+								"exec": [
+									"pm.test(\"key not present\", function () {",
+									"    pm.response.to.have.status(200);",
+									"    pm.expect(pm.response.text()).to.equal(\"\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": ""
+						},
+						"url": {
+							"raw": "localhost.localdomain:5000/db/idjada",
+							"host": [
+								"localhost",
+								"localdomain"
+							],
+							"port": "5000",
+							"path": [
+								"db",
+								"idjada"
+							]
+						},
+						"description": "Get for an non-existent key should return blank string"
+					},
+					"response": []
+				},
+				{
+					"name": "put",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "593f3310-01c4-4cfe-a251-98d0a909ad82",
+								"exec": [
+									"pm.test(\"put key succeeds\", () => {",
+									"    pm.response.to.have.status(200);",
+									"    pm.response.to.be.ok;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "jambajuice"
+						},
+						"url": {
+							"raw": "localhost.localdomain:5000/db/idjada",
+							"host": [
+								"localhost",
+								"localdomain"
+							],
+							"port": "5000",
+							"path": [
+								"db",
+								"idjada"
+							]
+						},
+						"description": "Adding key, should have ok reponse."
+					},
+					"response": []
+				},
+				{
+					"name": "get_1",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "6bf68982-ca8f-432a-97a6-6099fa41a2c3",
+								"exec": [
+									"pm.test(\"key not present\", function () {",
+									"    pm.response.to.have.status(200);",
+									"    pm.expect(pm.response.text()).to.equal(\"jambajuice\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": ""
+						},
+						"url": {
+							"raw": "localhost.localdomain:5002/db/idjada",
+							"host": [
+								"localhost",
+								"localdomain"
+							],
+							"port": "5002",
+							"path": [
+								"db",
+								"idjada"
+							]
+						},
+						"description": "Get the now existing key"
+					},
+					"response": []
+				},
+				{
+					"name": "path_0",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "4405b013-45e3-4af0-91ef-c2db05b25c84",
+								"exec": [
+									"pm.test(\"path to self\", function () {",
+									"    pm.response.to.have.status(200);",
+									"    pm.expect(pm.response.text()).to.equal(\"132\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": ""
+						},
+						"url": {
+							"raw": "localhost.localdomain:5001/db/path/idjada",
+							"host": [
+								"localhost",
+								"localdomain"
+							],
+							"port": "5001",
+							"path": [
+								"db",
+								"path",
+								"idjada"
+							]
+						},
+						"description": "Expected path from node 5000 to retrieve the key"
+					},
+					"response": []
+				},
+				{
+					"name": "path_1",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "4405b013-45e3-4af0-91ef-c2db05b25c84",
+								"exec": [
+									"pm.test(\"path with one hop\", function () {",
+									"    pm.response.to.have.status(200);",
+									"    pm.expect(pm.response.text()).to.equal(\"673\\n132\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": ""
+						},
+						"url": {
+							"raw": "localhost.localdomain:5000/db/path/idjada",
+							"host": [
+								"localhost",
+								"localdomain"
+							],
+							"port": "5000",
+							"path": [
+								"db",
+								"path",
+								"idjada"
+							]
+						},
+						"description": "Expected path from node 5001 to retrieve the key"
+					},
+					"response": []
+				},
+				{
+					"name": "path_2",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "4405b013-45e3-4af0-91ef-c2db05b25c84",
+								"exec": [
+									"pm.test(\"path with 2 hops\", function () {",
+									"    pm.response.to.have.status(200);",
+									"    pm.expect(pm.response.text()).to.equal(\"520\\n673\\n132\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": ""
+						},
+						"url": {
+							"raw": "localhost.localdomain:5002/db/path/idjada",
+							"host": [
+								"localhost",
+								"localdomain"
+							],
+							"port": "5002",
+							"path": [
+								"db",
+								"path",
+								"idjada"
+							]
+						},
+						"description": "Expected path from node 5002 to retrieve the key"
+					},
+					"response": []
+				},
+				{
+					"name": "path_3",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "4405b013-45e3-4af0-91ef-c2db05b25c84",
+								"exec": [
+									"pm.test(\"another path with 2 hops\", function () {",
+									"    pm.response.to.have.status(200);",
+									"    pm.expect(pm.response.text()).to.equal(\"458\\n673\\n132\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": ""
+						},
+						"url": {
+							"raw": "localhost.localdomain:5003/db/path/idjada",
+							"host": [
+								"localhost",
+								"localdomain"
+							],
+							"port": "5003",
+							"path": [
+								"db",
+								"path",
+								"idjada"
+							]
+						},
+						"description": "Expected path from node 5003 to retrieve the key"
+					},
+					"response": []
+				}
+			],
+			"description": "Testing key retrieval and path"
+		},
+		{
+			"name": "delete_key",
+			"item": [
+				{
+					"name": "get_0",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "6bf68982-ca8f-432a-97a6-6099fa41a2c3",
+								"exec": [
+									"pm.test(\"key not present\", function () {",
+									"    pm.response.to.have.status(200);",
+									"    pm.expect(pm.response.text()).to.equal(\"jambajuice\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": ""
+						},
+						"url": {
+							"raw": "localhost.localdomain:5002/db/idjada",
+							"host": [
+								"localhost",
+								"localdomain"
+							],
+							"port": "5002",
+							"path": [
+								"db",
+								"idjada"
+							]
+						},
+						"description": "Ensure the key still exists"
+					},
+					"response": []
+				},
+				{
+					"name": "delete_0",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "c597083b-e168-4b32-abf8-eae8249b16d1",
+								"exec": [
+									"pm.test(\"delete ok\", () => {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": ""
+						},
+						"url": {
+							"raw": "localhost.localdomain:5002/db/idjada",
+							"host": [
+								"localhost",
+								"localdomain"
+							],
+							"port": "5002",
+							"path": [
+								"db",
+								"idjada"
+							]
+						},
+						"description": "Delete a key, ok response"
+					},
+					"response": []
+				},
+				{
+					"name": "get_1",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "6bf68982-ca8f-432a-97a6-6099fa41a2c3",
+								"exec": [
+									"pm.test(\"key not present\", function () {",
+									"    pm.response.to.have.status(200);",
+									"    pm.expect(pm.response.text()).to.equal(\"\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": ""
+						},
+						"url": {
+							"raw": "localhost.localdomain:5001/db/idjada",
+							"host": [
+								"localhost",
+								"localdomain"
+							],
+							"port": "5001",
+							"path": [
+								"db",
+								"idjada"
+							]
+						},
+						"description": "Test if key has been deleted"
+					},
+					"response": []
+				},
+				{
+					"name": "delete_1",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "c597083b-e168-4b32-abf8-eae8249b16d1",
+								"exec": [
+									"pm.test(\"delete non-existent\", () => {",
+									"    pm.response.to.have.status(200);",
+									"    pm.expect(pm.response.text()).to.equal(\"non existent\")",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": ""
+						},
+						"url": {
+							"raw": "localhost.localdomain:5002/db/idjada",
+							"host": [
+								"localhost",
+								"localdomain"
+							],
+							"port": "5002",
+							"path": [
+								"db",
+								"idjada"
+							]
+						},
+						"description": "Delete a non-existent key, should response \"non existent\""
+					},
+					"response": []
+				}
+			],
+			"description": "Test key deletion"
 		}
 	]
 }
