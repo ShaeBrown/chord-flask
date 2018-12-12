@@ -1,0 +1,220 @@
+{
+	"info": {
+		"_postman_id": "8413d2cf-9ee9-4129-88ec-ad087d64f2a1",
+		"name": "dht",
+		"description": "Testing the distributed hash table chord logic",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "join",
+			"item": [
+				{
+					"name": "join",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "f6d37a58-b547-4169-83a2-98c2081ed2f1",
+								"exec": [
+									"pm.test(\"join succeeds\", function () {",
+									"    pm.response.to.have.status(200);",
+									"    pm.response.to.be.ok;",
+									"    setTimeout(() => {}, 5000);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "localhost.localdomain:5001\nlocalhost.localdomain:5002\nlocalhost.localdomain:5003"
+						},
+						"url": {
+							"raw": "localhost.localdomain:5000/dht/join",
+							"host": [
+								"localhost",
+								"localdomain"
+							],
+							"port": "5000",
+							"path": [
+								"dht",
+								"join"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "peers_0",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "c7e98cd0-cb8a-4378-b150-3b42d3f6cc64",
+								"exec": [
+									"pm.test(\"node 0 knows all peers\", () => {",
+									"    pm.response.to.have.status(200);",
+									"    var expected_nodes = [\"localhost.localdomain:5000\", \"localhost.localdomain:5001\", \"localhost.localdomain:5002\", \"localhost.localdomain:5003\"];",
+									"    var nodes = pm.response.text().split(\"\\n\")",
+									"    pm.expect(nodes).to.have.members(expected_nodes);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": ""
+						},
+						"url": {
+							"raw": "localhost.localdomain:5000/dht/peers",
+							"host": [
+								"localhost",
+								"localdomain"
+							],
+							"port": "5000",
+							"path": [
+								"dht",
+								"peers"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "peers_1",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "2bf1fb8b-8780-4e7b-9620-b0e36a3d261d",
+								"exec": [
+									"pm.test(\"node 1 knows all peers\", () => {",
+									"    pm.response.to.have.status(200);",
+									"    var expected_nodes = [\"localhost.localdomain:5000\", \"localhost.localdomain:5001\", \"localhost.localdomain:5002\", \"localhost.localdomain:5003\"];",
+									"    var nodes = pm.response.text().split(\"\\n\")",
+									"    pm.expect(nodes).to.have.members(expected_nodes);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": ""
+						},
+						"url": {
+							"raw": "localhost.localdomain:5001/dht/peers",
+							"host": [
+								"localhost",
+								"localdomain"
+							],
+							"port": "5001",
+							"path": [
+								"dht",
+								"peers"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "peers_2",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "69cf6d0e-47f0-4e28-a1c9-cc0b2af1f60f",
+								"exec": [
+									"pm.test(\"node 2 knows all peers\", () => {",
+									"    pm.response.to.have.status(200);",
+									"    var expected_nodes = [\"localhost.localdomain:5000\", \"localhost.localdomain:5001\", \"localhost.localdomain:5002\", \"localhost.localdomain:5003\"];",
+									"    var nodes = pm.response.text().split(\"\\n\")",
+									"    pm.expect(nodes).to.have.members(expected_nodes);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": ""
+						},
+						"url": {
+							"raw": "localhost.localdomain:5002/dht/peers",
+							"host": [
+								"localhost",
+								"localdomain"
+							],
+							"port": "5002",
+							"path": [
+								"dht",
+								"peers"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "peers_3",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "0846b15c-4d20-4c2d-bfb2-012381ef734e",
+								"exec": [
+									"pm.test(\"node 3 knows all peers\", () => {",
+									"    pm.response.to.have.status(200);",
+									"    var expected_nodes = [\"localhost.localdomain:5000\", \"localhost.localdomain:5001\", \"localhost.localdomain:5002\", \"localhost.localdomain:5003\"];",
+									"    var nodes = pm.response.text().split(\"\\n\")",
+									"    pm.expect(nodes).to.have.members(expected_nodes);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": ""
+						},
+						"url": {
+							"raw": "localhost.localdomain:5003/dht/peers",
+							"host": [
+								"localhost",
+								"localdomain"
+							],
+							"port": "5003",
+							"path": [
+								"dht",
+								"peers"
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"description": "Ensure all nodes are aware of each other after a 4-way join"
+		}
+	]
+}

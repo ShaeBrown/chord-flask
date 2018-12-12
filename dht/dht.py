@@ -1,6 +1,5 @@
 from hashlib import sha1
 from threading import Thread
-from dht import dht_server
 import requests
 import sys
 import time
@@ -11,7 +10,7 @@ class DHTNode(object):
         self.host = host
         self.m = m
         self.id = self.get_hash(self.host)
-        self.predecessor = None
+        self.predecessor = self.host
         self.successor = self.host
         self.finger_table = [self.host] * self.m
         self.stabalizer = Stabalizer(self)
@@ -19,12 +18,11 @@ class DHTNode(object):
         self.table = {}
 
     def join(self, addr):
-        self.predecessor = None
         self.successor = self.__call_successor(addr, self.id)
         print("Successor updated to: ", str(self.get_hash(self.successor)))
-        if self.predecessor is None:
-            self.predecessor = self.successor
+        if self.predecessor == self.host:
             print("Predecessor updated to: ", str(self.get_hash(self.successor)))
+            self.predecessor = self.successor
 
     def leave(self):
         self.stabalizer.stop()
@@ -44,26 +42,28 @@ class DHTNode(object):
         del self.table[h]
 
     @staticmethod
-    def between(x, a, b, inclusive=False):
-        if inclusive:
-            if x < b:
-                return ( x < a and a < b )
-            else:
-                return ( x < a or a < b )
+    def between(x, a, b):
+        if a > b:
+            return x > a or x < b
+        elif a < b:
+            return a < x and b > x
         else:
-            if x < b:
-                return ( x < a and a <= b )
-            else:
-                return ( x < a or a <= b )
+            return x !=a and x!=b
+
+    @staticmethod
+    def between_right_inclusive(x, a, b):
+        if a > b:
+            return a < x or b >= x
+        elif a < b:
+            return a < x and b >= x
+        else:
+            return a !=x
 
     def notify(self, addr):
         n_prime = self.get_hash(addr)
-        if self.predecessor is None or DHTNode.between(n_prime, self.get_hash(self.predecessor), self.id):
+        if self.predecessor == self.host or DHTNode.between(n_prime, self.get_hash(self.predecessor), self.id):
             print("Predecessor updated to: ", n_prime)
             self.predecessor = addr
-            # if self.successor == self.host:
-            #     self.successor = addr
-            #     print("Successor updated to: ", n_prime)
             return True
         return False
 
@@ -111,26 +111,32 @@ class Stabalizer(object):
                 if r.status_code == 200 or r.status_code == 307:
                     x = r.text
                 else:
-                    print('Error getting predecessor for successor: {0}'.format(url), file=sys.stderr)
+                    print('Error getting predecessor for successor: {0}'.format(url))
                     time.sleep(interval)
                     continue
-                x_id = self.node.get_hash(x)
-                succ_id = self.node.get_hash(self.node.successor)
-                if DHTNode.between(x_id, self.node.id, succ_id):
-                    print("Successor updated to {0}".format(x_id))
-                    self.node.successor = x
-                url = 'http://{0}/dht/notify?addr={1}'.format(self.node.successor, self.node.host)
-                r = requests.post(url)
-                if r.status_code != 200:
-                    print('Error notifying successor: {0}'.format(url), file=sys.stderr)
+            elif self.node.predecessor != self.node.host:
+                x = self.node.predecessor
+            else:
+                time.sleep(interval)
+                continue
+            x_id = self.node.get_hash(x)
+            succ_id = self.node.get_hash(self.node.successor)
+            if DHTNode.between(x_id, self.node.id, succ_id):
+                print("Successor updated to {0}".format(x_id))
+                self.node.successor = x
+            url = 'http://{0}/dht/notify?addr={1}'.format(self.node.successor, self.node.host)
+            r = requests.post(url)
+            if r.status_code != 200:
+                print('Error notifying successor: {0}'.format(url),)
             time.sleep(interval)
 
     def fix_fingers(self, interval):
+        from dht import dht_server
         while True:
             id = self.node.get_finger_id(self.next)
             next_entry = dht_server._find_successor(self.node, id)
             if type(next_entry) != str and next_entry.status_code != 200 and next_entry.status_code != 307:
-                print('Error fixing finger table', file=sys.stderr)
+                print('Error fixing finger table')
                 return
             else:
                 if type(next_entry) != str:
@@ -139,6 +145,7 @@ class Stabalizer(object):
                     print("Updating entry {0} to {1}".format(self.next, next_entry))
                 self.node.finger_table[self.next] = next_entry
                 if self.next == 0:
+                    print("Updated successor to {0}".format(self.node.get_hash(next_entry)))
                     self.node.successor = next_entry
             self.next = (self.next + 1) % self.node.m
             time.sleep(interval)

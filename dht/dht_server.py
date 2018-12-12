@@ -45,7 +45,7 @@ def get_key_path(key):
   path = [str(node.id)]
   h = node.get_hash(key)
   succ_id = node.get_hash(node.successor)
-  if DHTNode.between(h, node.id, succ_id, inclusive=True):
+  if DHTNode.between_right_inclusive(h, node.id, succ_id):
     path.append(str(succ_id))
     return "\n".join(path)
   addr = node.closest_preceding_node(id)
@@ -131,7 +131,7 @@ def peers():
   peers = []
   peers.append(node.host)
   succ = node.successor
-  while succ and succ not in peers: # TODO will there be a circle?
+  while succ != peers[0]:
     peers.append(succ)
     url = "http://{0}/dht/get_successor".format(succ)
     r = requests.get(url)
@@ -149,14 +149,12 @@ def peers_id():
   """
   peers = []
   peers.append(str(node.id))
-  curr = node.host
   succ = node.successor
-  while succ and succ != curr:
+  while node.get_hash(succ) != int(peers[0]):
     peers.append(str(node.get_hash(succ)))
     url = "http://{0}/dht/get_successor".format(succ)
     r = requests.get(url)
     if r.status_code == 200:
-      curr = succ
       succ = r.text
     else:
       abort(404)
@@ -222,7 +220,7 @@ def closest_preceding_node():
 def _find_successor(node, id):
   if node.host == node.successor:
     return node.host
-  if DHTNode.between(id, node.id, node.get_hash(node.successor), inclusive=True):
+  if DHTNode.between_right_inclusive(id, node.id, node.get_hash(node.successor)):
     return node.successor
   url = "http://{0}/dht/closest_preceding_node?id={1}".format(node.successor, id)
   r = requests.get(url)
