@@ -27,24 +27,27 @@ Now you can initalize each dht server
 python runserver.py -p=5000
 python runserver.py -p=5001
 python runserver.py -p=5002
-# etc
+python runserver.py -p=5003
 ```
 
 ### Join nodes
 I used [postman](https://www.getpostman.com/apps) to send requests. You can also use [curl](https://curl.haxx.se/download.html)
-```
-curl --data $'localhost.localdomain:5001\nlocalhost.localdomain:5002' #etc
-localhost.localdomain:5000/dht/join --header "Content-Type:text/plain"
+```bash
+curl --location --request PUT "localhost.localdomain:5000/dht/join" \
+  --data "localhost.localdomain:5001
+localhost.localdomain:5002
+localhost.localdomain:5003"
 ```
 
 ### Put key
-```
-curl --data $'this is the value' localhost.localdomain:5000/db/keyval --header "Content-Type:text/plain"
+```bash
+curl --location --request PUT "localhost.localdomain:5000/db/keyval" \
+  --data "this is the data"
 ```
 
 ### Get key
-```
-curl localhost.localdomain:5000/db/keyval
+```bash
+curl --location --request GET "localhost.localdomain:5002/db/keyval"
 ```
 
 ## Visualize network
@@ -59,3 +62,17 @@ This is an example of what a visualization of the peer to peer network would loo
 
 This is an example of what a path would look like when trying to find the key
 ![keypath](./img/keypath.png)
+
+## Run tests
+Postman tests can be run by calling this [script](./dht/test/run_postman_tests.sh), or if you have postman installed: 
+
+[![Run in Postman](https://run.pstmn.io/button.svg)](https://app.getpostman.com/run-collection/ab23f768f73247af8bb0) 
+
+
+Just make sure there are 4 servers running on port 5000, 5001, 5002 and 5003
+
+Unit tests can be run using:
+```
+cd dht
+python -m test.dht_node_test
+```
