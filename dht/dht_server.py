@@ -39,11 +39,14 @@ def view_key_path(key):
 @app.route('/db/path/<key>', methods=['GET'])
 def get_key_path(key):
   val = node.get_key(key)
-  if val or node.successor == node.host:
+  succ = node.get_successor()
+  if val or succ == node.host:
     return str(node.id)
   path = [str(node.id)]
   h = node.get_hash(key)
-  succ_id = node.get_hash(node.successor)
+  if DHTNode.between_right_inclusive(h, node.get_hash(node.get_predecessor()), node.id):
+    return "\n".join(path)
+  succ_id = node.get_hash(succ)
   if DHTNode.between_right_inclusive(h, node.id, succ_id):
     path.append(str(succ_id))
     return "\n".join(path)
@@ -75,7 +78,7 @@ def get(key):
   if val:
     return val
   h = node.get_hash(key)
-  if DHTNode.between_right_inclusive(h, node.get_hash(node.predecessor), node.id):
+  if DHTNode.between_right_inclusive(h, node.get_hash(node.get_predecessor()), node.id):
     return ""
   succ = _find_successor(node, h)
   if succ == node.host:
@@ -91,7 +94,7 @@ def get(key):
 @app.route('/db/<key>', methods=['POST', 'PUT'])
 def put(key):
   """
-  Upserts the key into the DHT. The value is equal to the body of the HTTP
+  Inserts the key into the DHT. The value is equal to the body of the HTTP
   request.
   """
   h = node.get_hash(key)
@@ -107,6 +110,15 @@ def put(key):
     return "ok", 200
   return abort(404)
 
+
+@app.route('/db/hash/<hash>', methods=['POST', 'PUT'])
+def put_hash(hash):
+  """
+  Inserts the hash into the DHT. This is for transfering keys
+  """
+  node.table[hash] = request.data.decode()
+  return "ok", 200
+
 @app.route('/db/<key>', methods=['DELETE'])
 def delete(key):
   """
@@ -117,7 +129,7 @@ def delete(key):
     node.delete_key(key)
     return "deleted", 200
   h = node.get_hash(key)
-  if DHTNode.between_right_inclusive(h, node.get_hash(node.predecessor), node.id):
+  if DHTNode.between_right_inclusive(h, node.get_hash(node.get_predecessor()), node.id):
     return "non existent", 200
   succ = _find_successor(node, h)
   if succ == node.host:
@@ -130,6 +142,19 @@ def delete(key):
     return res.text, 200
   return abort(404)
 
+@app.route('/db/transfer', methods=['POST'])
+def transfer():
+  addr = request.args.get('addr')
+  for key in list(node.table):
+    if not DHTNode.between_right_inclusive(int(key), node.get_hash(addr), node.id):
+      ok = node.transfer(int(key), addr)
+      if not ok:
+        abort(404)
+      print("Key {0} transfered from {1} to {2}".format(key, node.host, addr))
+    else:
+      print("Key {0} belongs in {1}".format(key, node.host))
+  return "updated", 200
+
 @app.route('/dht/peers', methods=['GET'])
 def peers():
   """
@@ -138,12 +163,14 @@ def peers():
   """
   peers = []
   peers.append(node.host)
-  succ = node.successor
-  while succ != peers[0]:
+  succ = node.get_successor()
+  curr = node.host
+  while succ != curr and succ != peers[0]:
     peers.append(succ)
     url = "http://{0}/dht/get_successor".format(succ)
     r = requests.get(url)
     if r.status_code == 200:
+      curr = succ
       succ = r.text
     else:
       abort(404)
@@ -157,16 +184,20 @@ def peers_id():
   """
   peers = []
   peers.append(str(node.id))
-  succ = node.successor
-  while node.get_hash(succ) != int(peers[0]):
+  curr = node.host
+  succ = node.get_successor()
+  while succ != curr and node.get_hash(succ) != int(peers[0]):
     peers.append(str(node.get_hash(succ)))
     url = "http://{0}/dht/get_successor".format(succ)
-    r = requests.get(url)
-    if r.status_code == 200:
-      succ = r.text
-    else:
-      abort(404)
-      return
+    try:
+      r = requests.get(url)
+      if r.status_code == 200:
+        curr = succ
+        succ = r.text
+      else:
+        return abort(404)
+    except Exception:
+      return abort(404)
   return "\n".join(peers)
 
 @app.route('/dht/join', methods=['POST', 'PUT'])
@@ -183,7 +214,7 @@ def join():
       node.join(addr)
     return "ok", 200
   except ConnectionError:
-    abort(404)
+    return abort(404)
 
 @app.route('/dht/leave', methods=['GET'])
 def leave():
@@ -192,13 +223,18 @@ def leave():
   is leaving has stabilized and this node is a standalone node now; noop is
   not part of any DHT.
   """
-  raise NotImplementedError
+  ok = node.leave()
+  if not ok:
+    return abort(404)
+  func = request.environ.get('werkzeug.server.shutdown')
+  if func is None:
+    raise RuntimeError('Not running with the Werkzeug Server')
+  func()
+  return "ok", 200
 
 @app.route('/dht/get_successor', methods=['GET'])
 def get_successor():
-  if node.successor:
-    return node.successor
-  return ""
+  return node.get_successor()
 
 @app.route('/dht/find_successor', methods=['GET'])
 def find_successor():
@@ -207,9 +243,19 @@ def find_successor():
 
 @app.route('/dht/get_predecessor', methods=['GET'])
 def get_predecessor():
-  if node.predecessor:
-    return node.predecessor
-  return node.host
+  return node.get_predecessor()
+
+@app.route('/dht/set_successor', methods=['POST', 'PUT'])
+def set_successor():
+  addr = request.args.get('addr')
+  node.update_successor(addr)
+  return "ok", 200
+
+@app.route('/dht/set_predecessor', methods=['POST', 'PUT'])
+def set_predecessor():
+  addr = request.args.get('addr')
+  node.update_predecessor(addr)
+  return "ok", 200
 
 @app.route('/dht/notify', methods=['POST', 'PUT'])
 def notify():
@@ -225,11 +271,12 @@ def closest_preceding_node():
   return node.closest_preceding_node(id)
 
 def _find_successor(node, id):
-  if node.host == node.successor:
+  succ = node.get_successor()
+  if node.host == succ:
     return node.host
-  if DHTNode.between_right_inclusive(id, node.id, node.get_hash(node.successor)):
-    return node.successor
-  url = "http://{0}/dht/closest_preceding_node?id={1}".format(node.successor, id)
+  if DHTNode.between_right_inclusive(id, node.id, node.get_hash(succ)):
+    return succ
+  url = "http://{0}/dht/closest_preceding_node?id={1}".format(succ, id)
   r = requests.get(url)
   n0 = r.text
   url =  "http://{0}/dht/find_successor?id={1}".format(n0, id)

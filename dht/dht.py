@@ -1,5 +1,5 @@
 from hashlib import sha1
-from threading import Thread
+from threading import Thread, Lock
 import requests
 import sys
 import time
@@ -11,19 +11,80 @@ class DHTNode(object):
         self.m = m
         self.id = self.get_hash(self.host)
         self.predecessor = self.host
+        self.pred_lock = Lock()
         self.successor = self.host
+        self.succ_lock = Lock()
         self.finger_table = [self.host] * self.m
         self.stabalizer = Stabalizer(self)
         self.stabalizer.run()
         self.table = {}
 
     def join(self, addr):
-        self.successor = self.__call_successor(addr, self.id)
-        self.predecessor = self.host
+        self.update_successor(self.__call_successor(addr, self.id))
+        self.update_predecessor(self.host)
         Stabalizer.stabalize_node(self)
 
     def leave(self):
         self.stabalizer.stop()
+        succ = self.get_successor()
+        for key in list(self.table):
+            ok = self.transfer(int(key), succ)
+            if not ok:
+                return False
+        pred = self.get_predecessor()
+        try:
+            url = "http://" + pred + '/dht/set_successor?addr=' + succ
+            res = requests.post(url)
+            if res.status_code != 200:
+                return False
+            url = "http://" + succ + '/dht/set_predecessor?addr=' + pred
+            res = requests.post(url)
+            if res.status_code != 200:
+                return False
+        except Exception:
+            print()
+            return False
+        return True
+
+    def transfer(self, hash, addr):
+        if addr == self.host:
+            return True
+        data = self.table[str(hash)]
+        url = "http://" + addr + '/db/hash/' + str(hash)
+        res = requests.post(url, data=str.encode(str(data)))
+        if res.status_code != 200:
+            return False
+        else:
+            del self.table[str(hash)]
+            return True
+    
+    def update_successor(self, succ):
+        self.succ_lock.acquire()
+        self.successor = succ
+        self.succ_lock.release()
+        if succ == self.host:
+            return
+        url = "http://" + succ + "/db/transfer?addr=" + self.host
+        res = requests.post(url)
+        if res.status_code != 200:
+            print("Keys failed to transfer")
+
+    def get_successor(self):
+        self.succ_lock.acquire()
+        succ = self.successor
+        self.succ_lock.release()
+        return succ
+    
+    def get_predecessor(self):
+        self.pred_lock.acquire()
+        pred = self.predecessor
+        self.pred_lock.release()
+        return pred
+    
+    def update_predecessor(self, pred):
+        self.pred_lock.acquire()
+        self.predecessor = pred
+        self.pred_lock.release()
 
     def get_key(self, key):
         h = str(self.get_hash(key))
@@ -59,8 +120,9 @@ class DHTNode(object):
 
     def notify(self, addr):
         n_prime = self.get_hash(addr)
-        if self.predecessor == self.host or DHTNode.between(n_prime, self.get_hash(self.predecessor), self.id):
-            self.predecessor = addr
+        pred = self.get_predecessor()
+        if pred == self.host or DHTNode.between(n_prime, self.get_hash(pred), self.id):
+            self.update_predecessor(addr)
             return True
         return False
 
@@ -88,6 +150,7 @@ class Stabalizer(object):
     def __init__(self, node):
         self.node = node
         self.next = 0
+        self.stabalize = True
 
     def run(self):
         self.stabilize_thread = Thread(target = self.stabilize, args=(2,))
@@ -98,58 +161,77 @@ class Stabalizer(object):
         self.check_predecessor_thread.start()
     
     def stop(self):
-        raise NotImplementedError
+        self.stabalize = False
+        self.check_predecessor_thread.join()
+        self.stabilize_thread.join()
+        self.finger_thread.join()
 
     @staticmethod
     def stabalize_node(node):
-        if node.successor != node.host:
-            url = 'http://{0}/dht/get_predecessor'.format(node.successor)
-            r = requests.get(url)
-            if r.status_code == 200 or r.status_code == 307:
-                x = r.text
-            else:
+        succ = node.get_successor()
+        pred = node.get_predecessor()
+        if succ != node.host:
+            url = 'http://{0}/dht/get_predecessor'.format(succ)
+            try:
+                r = requests.get(url)
+                if r.status_code == 200:
+                    x = r.text
+                else:
+                    print('Error getting predecessor for successor: {0}'.format(url))
+                    return
+            except Exception:
                 print('Error getting predecessor for successor: {0}'.format(url))
                 return
-        elif node.predecessor != node.host:
-            x = node.predecessor
+        elif pred != node.host:
+            x = pred
         else:
             return
         x_id = node.get_hash(x)
-        succ_id = node.get_hash(node.successor)
+        succ_id = node.get_hash(node.get_successor())
         if DHTNode.between(x_id, node.id, succ_id):
-            node.successor = x
-        url = 'http://{0}/dht/notify?addr={1}'.format(node.successor, node.host)
+            node.update_successor(x)
+        url = 'http://{0}/dht/notify?addr={1}'.format(node.get_successor(), node.host)
         r = requests.post(url)
         if r.status_code != 200:
             print('Error notifying successor: {0}'.format(url),)
 
     def stabilize(self, interval):
-        while True:
+        while self.stabalize:
             Stabalizer.stabalize_node(self.node)
             time.sleep(interval)
 
     def fix_fingers(self, interval):
         from dht import dht_server
-        while True:
+        while self.stabalize:
             id = self.node.get_finger_id(self.next)
-            next_entry = dht_server._find_successor(self.node, id)
-            if type(next_entry) != str and next_entry.status_code != 200 and next_entry.status_code != 307:
+            try:
+                next_entry = dht_server._find_successor(self.node, id)
+            except Exception:
                 print('Error fixing finger table')
-                return
+                time.sleep(interval)
+                continue
+            if type(next_entry) != str and next_entry.status_code != 200:
+                print('Error fixing finger table')
+                time.sleep(interval)
+                continue
             else:
                 if type(next_entry) != str:
                     next_entry = next_entry.text
                 self.node.finger_table[self.next] = next_entry
                 if self.next == 0:
-                    self.node.successor = next_entry
+                    self.node.update_successor(next_entry)
             self.next = (self.next + 1) % self.node.m
             time.sleep(interval)
 
     def check_predecessor(self, interval):
-        while True:
-            if self.node.predecessor != None:
-                url = "http://{0}/".format(self.node.predecessor)
-                r = requests.get(url)
-                if r.status_code != 200:
-                    self.node.predecessor = self.node.host
+        while self.stabalize:
+            pred = self.node.get_predecessor()
+            if pred != self.node.host:
+                url = "http://{0}/".format(pred)
+                try:
+                    r = requests.get(url)
+                    if r.status_code != 200:
+                        self.node.update_predecessor(self.node.host)
+                except Exception:
+                    self.node.update_predecessor(self.node.host)  
             time.sleep(interval)

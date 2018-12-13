@@ -69,7 +69,7 @@ Postman tests can be run by calling this [script](./dht/test/run_postman_tests.s
 [![Run in Postman](https://run.pstmn.io/button.svg)](https://app.getpostman.com/run-collection/ab23f768f73247af8bb0) 
 
 
-Just make sure there are 4 servers running on port 5000, 5001, 5002 and 5003
+Just make sure there are 5 servers running on port 5000, 5001, 5002, 5003, 5007
 
 Unit tests can be run using:
 ```
