@@ -2,6 +2,7 @@ from flask import Flask, redirect, url_for, request, logging, abort, render_temp
 import os
 import requests
 from dht.dht import DHTNode
+import redis
 
 app = Flask(__name__, static_folder="../visualize/dist", static_url_path="")
 m = 10
@@ -11,8 +12,25 @@ node = None
 def startup():
   global node
   addr = app.config['SERVER_NAME']
-  node = DHTNode(addr, m)
+  redis_db = redis.StrictRedis(host=app.config["HOST"], port=int(app.config["REDIS_PORT"]))
+  node = DHTNode(addr, m, redis_db)
+  try:
+    print("Pinging db..")
+    node.redis_db.ping()
+  except redis.exceptions.ConnectionError:
+    print("Cannot start redis instance on port {0}. Shutting down\n".format(app.config["REDIS_PORT"]))
+    shutdown()
+  if app.config['FLUSH']:
+    node.redis_db.flushall()
   print("This server's id is {0}".format(node.id))
+
+@app.route('/shutdown', methods=["GET"])
+def shutdown():
+  func = request.environ.get('werkzeug.server.shutdown')
+  if func is None:
+    raise RuntimeError('Not running with the Werkzeug Server')
+  func()
+  return "ok", 200
 
 @app.route('/', methods=['GET'])
 def ping():
@@ -20,6 +38,11 @@ def ping():
   Returns when the server is ready.
   """
   return ''
+
+@app.route('/dht/flush', methods=['POST'])
+def flush():
+  node.redis_db.flushall()
+  return "ok", 200
 
 @app.route('/dht/peers/view', methods=['GET'])
 def view_peers():
@@ -66,7 +89,8 @@ def keys():
   Returns all keys stored on THIS node in plain text separated by a new line:
     <key1>\n<key2>\n...
   """
-  return "\n".join(node.table.keys())
+  k = [s.decode() for s in node.redis_db.keys()]
+  return "\n".join(k)
 
 @app.route('/db/<key>', methods=['GET'])
 def get(key):
@@ -116,7 +140,7 @@ def put_hash(hash):
   """
   Inserts the hash into the DHT. This is for transfering keys
   """
-  node.table[hash] = request.data.decode()
+  node.redis_db.set(hash, request.data.decode())
   return "ok", 200
 
 @app.route('/db/<key>', methods=['DELETE'])
@@ -145,14 +169,12 @@ def delete(key):
 @app.route('/db/transfer', methods=['POST'])
 def transfer():
   addr = request.args.get('addr')
-  for key in list(node.table):
+  keys = [s.decode() for s in node.redis_db.keys()]
+  for key in keys:
     if not DHTNode.between_right_inclusive(int(key), node.get_hash(addr), node.id):
       ok = node.transfer(int(key), addr)
       if not ok:
         abort(404)
-      print("Key {0} transfered from {1} to {2}".format(key, node.host, addr))
-    else:
-      print("Key {0} belongs in {1}".format(key, node.host))
   return "updated", 200
 
 @app.route('/dht/peers', methods=['GET'])
@@ -226,10 +248,7 @@ def leave():
   ok = node.leave()
   if not ok:
     return abort(404)
-  func = request.environ.get('werkzeug.server.shutdown')
-  if func is None:
-    raise RuntimeError('Not running with the Werkzeug Server')
-  func()
+  shutdown()
   return "ok", 200
 
 @app.route('/dht/get_successor', methods=['GET'])

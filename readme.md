@@ -21,13 +21,26 @@ virtualenv .venv
 pip install -r requirements.txt
 source .venv/bin/activate
 ```
+
+Install redis
+```bash
+sudo apt-get install redis-server
+```
 ### Run nodes
+Run a redis server for each chord node
+```
+redis-server --port 6000
+redis-server --port 6001
+redis-server --port 6002
+redis-server --port 6003
+```
+
 Now you can initalize each dht server
 ```
-python runserver.py -p=5000
-python runserver.py -p=5001
-python runserver.py -p=5002
-python runserver.py -p=5003
+python runserver.py -p=5000 -r=6000
+python runserver.py -p=5001 -r=6001
+python runserver.py -p=5002 -r=6002
+python runserver.py -p=5003 -r=6003
 ```
 
 ### Join nodes
@@ -64,12 +77,13 @@ This is an example of what a path would look like when trying to find the key
 ![keypath](./img/keypath.png)
 
 ## Run tests
-Postman tests can be run by calling this [script](./dht/test/run_postman_tests.sh), or if you have postman installed: 
+Postman tests can be run by calling this [script](./dht/test/run_postman_tests.sh), which starts all the chord nodes, and redis servers.
+
+Or if you have postman installed: 
 
 [![Run in Postman](https://run.pstmn.io/button.svg)](https://app.getpostman.com/run-collection/ab23f768f73247af8bb0) 
 
-
-Just make sure there are 5 servers running on port 5000, 5001, 5002, 5003, 5007
+Just make sure there are 5 servers running on port 5000, 5001, 5002, 5003, 5007, each with a redis server
 
 Unit tests can be run using:
 ```

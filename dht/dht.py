@@ -6,7 +6,7 @@ import time
 from flask.json import JSONEncoder, JSONDecoder
 
 class DHTNode(object):
-    def __init__(self, host, m):
+    def __init__(self, host, m, redis_db):
         self.host = host
         self.m = m
         self.id = self.get_hash(self.host)
@@ -17,7 +17,8 @@ class DHTNode(object):
         self.finger_table = [self.host] * self.m
         self.stabalizer = Stabalizer(self)
         self.stabalizer.run()
-        self.table = {}
+        self.redis_db = redis_db
+
 
     def join(self, addr):
         self.update_successor(self.__call_successor(addr, self.id))
@@ -27,7 +28,8 @@ class DHTNode(object):
     def leave(self):
         self.stabalizer.stop()
         succ = self.get_successor()
-        for key in list(self.table):
+        keys = [s.decode() for s in self.redis_db.keys()]
+        for key in keys:
             ok = self.transfer(int(key), succ)
             if not ok:
                 return False
@@ -49,13 +51,13 @@ class DHTNode(object):
     def transfer(self, hash, addr):
         if addr == self.host:
             return True
-        data = self.table[str(hash)]
+        data = self.redis_db.get(str(hash)).decode()
         url = "http://" + addr + '/db/hash/' + str(hash)
         res = requests.post(url, data=str.encode(str(data)))
         if res.status_code != 200:
             return False
         else:
-            del self.table[str(hash)]
+            self.redis_db.delete(str(hash))
             return True
     
     def update_successor(self, succ):
@@ -88,17 +90,18 @@ class DHTNode(object):
 
     def get_key(self, key):
         h = str(self.get_hash(key))
-        if h in self.table:
-            return self.table[h]
+        val = self.redis_db.get(h)
+        if val is not None:
+            return val.decode()
         return ""
     
     def set_key(self, key, value):
         h = self.get_hash(key)
-        self.table[str(h)] = value
+        self.redis_db.set(str(h), value)
     
     def delete_key(self, key):
         h = self.get_hash(key)
-        del self.table[str(h)]
+        self.redis_db.delete(str(h))
 
     @staticmethod
     def between(x, a, b):

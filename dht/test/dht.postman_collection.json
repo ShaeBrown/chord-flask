@@ -10,6 +10,213 @@
 			"name": "join",
 			"item": [
 				{
+					"name": "flush",
+					"item": [
+						{
+							"name": "flush_0",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"id": "93c5194c-7935-434f-a5e8-d9dd6d67f62a",
+										"exec": [
+											"pm.test(\"flush node 0\", function () {",
+											"    pm.response.to.have.status(200);",
+											"    pm.response.to.be.ok;",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": ""
+								},
+								"url": {
+									"raw": "localhost.localdomain:5000/dht/flush",
+									"host": [
+										"localhost",
+										"localdomain"
+									],
+									"port": "5000",
+									"path": [
+										"dht",
+										"flush"
+									]
+								},
+								"description": "Make sure no leftover keys interfear with our tests"
+							},
+							"response": []
+						},
+						{
+							"name": "flush_1",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"id": "93c5194c-7935-434f-a5e8-d9dd6d67f62a",
+										"exec": [
+											"pm.test(\"flush node 1\", function () {",
+											"    pm.response.to.have.status(200);",
+											"    pm.response.to.be.ok;",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": ""
+								},
+								"url": {
+									"raw": "localhost.localdomain:5001/dht/flush",
+									"host": [
+										"localhost",
+										"localdomain"
+									],
+									"port": "5001",
+									"path": [
+										"dht",
+										"flush"
+									]
+								},
+								"description": "Make sure no leftover keys interfear with our tests"
+							},
+							"response": []
+						},
+						{
+							"name": "flush_2",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"id": "93c5194c-7935-434f-a5e8-d9dd6d67f62a",
+										"exec": [
+											"pm.test(\"flush node 2\", function () {",
+											"    pm.response.to.have.status(200);",
+											"    pm.response.to.be.ok;",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": ""
+								},
+								"url": {
+									"raw": "localhost.localdomain:5002/dht/flush",
+									"host": [
+										"localhost",
+										"localdomain"
+									],
+									"port": "5002",
+									"path": [
+										"dht",
+										"flush"
+									]
+								},
+								"description": "Make sure no leftover keys interfear with our tests"
+							},
+							"response": []
+						},
+						{
+							"name": "flush_3",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"id": "93c5194c-7935-434f-a5e8-d9dd6d67f62a",
+										"exec": [
+											"pm.test(\"flush node 3\", function () {",
+											"    pm.response.to.have.status(200);",
+											"    pm.response.to.be.ok;",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": ""
+								},
+								"url": {
+									"raw": "localhost.localdomain:5003/dht/flush",
+									"host": [
+										"localhost",
+										"localdomain"
+									],
+									"port": "5003",
+									"path": [
+										"dht",
+										"flush"
+									]
+								},
+								"description": "Make sure no leftover keys interfear with our tests"
+							},
+							"response": []
+						},
+						{
+							"name": "flush_7",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"id": "93c5194c-7935-434f-a5e8-d9dd6d67f62a",
+										"exec": [
+											"pm.test(\"flush node 7\", function () {",
+											"    pm.response.to.have.status(200);",
+											"    pm.response.to.be.ok;",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": ""
+								},
+								"url": {
+									"raw": "localhost.localdomain:5007/dht/flush",
+									"host": [
+										"localhost",
+										"localdomain"
+									],
+									"port": "5007",
+									"path": [
+										"dht",
+										"flush"
+									]
+								},
+								"description": "Make sure no leftover keys interfear with our tests"
+							},
+							"response": []
+						}
+					],
+					"description": "Flush all servers before test",
+					"_postman_isSubFolder": true
+				},
+				{
 					"name": "join",
 					"event": [
 						{
@@ -1015,6 +1222,168 @@
 				}
 			],
 			"description": "Testing leave logic and key transfer"
+		},
+		{
+			"name": "cleanup",
+			"item": [
+				{
+					"name": "shutdown_0",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "0e79ee21-044c-4b58-a533-20ecf439fc8c",
+								"exec": [
+									"pm.test(\"shutdown node 0\", function () {",
+									"    pm.response.to.have.status(200);",
+									"    pm.response.to.be.ok;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": ""
+						},
+						"url": {
+							"raw": "localhost.localdomain:5000/shutdown",
+							"host": [
+								"localhost",
+								"localdomain"
+							],
+							"port": "5000",
+							"path": [
+								"shutdown"
+							]
+						},
+						"description": "Shutdown node 0"
+					},
+					"response": []
+				},
+				{
+					"name": "shutdown_1",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "0e79ee21-044c-4b58-a533-20ecf439fc8c",
+								"exec": [
+									"pm.test(\"shutdown node 1\", function () {",
+									"    pm.response.to.have.status(200);",
+									"    pm.response.to.be.ok;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": ""
+						},
+						"url": {
+							"raw": "localhost.localdomain:5001/shutdown",
+							"host": [
+								"localhost",
+								"localdomain"
+							],
+							"port": "5001",
+							"path": [
+								"shutdown"
+							]
+						},
+						"description": "Shutdown node 0"
+					},
+					"response": []
+				},
+				{
+					"name": "shutdown_2",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "0e79ee21-044c-4b58-a533-20ecf439fc8c",
+								"exec": [
+									"pm.test(\"shutdown node 2\", function () {",
+									"    pm.response.to.have.status(200);",
+									"    pm.response.to.be.ok;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": ""
+						},
+						"url": {
+							"raw": "localhost.localdomain:5002/shutdown",
+							"host": [
+								"localhost",
+								"localdomain"
+							],
+							"port": "5002",
+							"path": [
+								"shutdown"
+							]
+						},
+						"description": "Shutdown node 0"
+					},
+					"response": []
+				},
+				{
+					"name": "shutdown_3",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "0e79ee21-044c-4b58-a533-20ecf439fc8c",
+								"exec": [
+									"pm.test(\"shutdown node 3\", function () {",
+									"    pm.response.to.have.status(200);",
+									"    pm.response.to.be.ok;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": ""
+						},
+						"url": {
+							"raw": "localhost.localdomain:5003/shutdown",
+							"host": [
+								"localhost",
+								"localdomain"
+							],
+							"port": "5003",
+							"path": [
+								"shutdown"
+							]
+						},
+						"description": "Shutdown node 3"
+					},
+					"response": []
+				}
+			],
+			"description": "Shutdown all servers"
 		}
 	]
 }
